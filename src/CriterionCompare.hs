@@ -10,8 +10,9 @@ import Data.Map            (Map)
 import Data.Traversable    (for)
 import System.FilePath     (dropExtension, takeFileName)
 
-import qualified Data.Map.Strict     as Map
-import qualified Options.Applicative as O
+import qualified Data.Map.Strict        as Map
+import qualified Options.Applicative    as O
+import qualified Text.PrettyPrint.Boxes as B
 
 import CsvParse
 import Table
@@ -94,7 +95,25 @@ main = do
             let results :: Map RowName (Map RunName Stats)
                 results = flipFiniteMap results1
 
-            let table :: [[String]]
+            let header :: Row V1 B.Box
+                header = makeHeader fname names
+
+            let table :: [Row V2 B.Box]
                 table = makeTable fname names results
 
-            putStrLn $ tabular table
+            let table1 :: Row V2 [B.Box]
+                table1 = sequenceA table
+
+            let table2 :: Row V2 B.Box
+                table2 = case table1 of
+                    Row f n xs -> Row
+                        (B.vcat B.left f)
+                        (B.vcat B.right n)
+                        (fmap (fmap (B.vcat B.right)) xs)
+
+            let table3 :: Row V1 B.Box
+                table3 = hoistRow (\(V2 x y) -> V1 (x B.<+> y)) table2
+
+            let table4 = pure (B.//) <*> header <*> table3
+
+            B.printBox $ B.hsep 2 B.left table4

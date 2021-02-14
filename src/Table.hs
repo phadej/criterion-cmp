@@ -1,50 +1,81 @@
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE RankNTypes #-}
 module Table where
 
 import Control.Monad (ap)
 import Data.Foldable (for_)
-import Data.List     (intercalate)
 import Data.Map      (Map)
 import Numeric       (showFFloat)
 
+import qualified Text.PrettyPrint.Boxes as B
 import qualified Data.Map.Strict as Map
 
 import Types
+
+-- | Row of things.
+--
+-- Name, first column, and then pair of columns
+data Row f a = Row a a [f a]
+  deriving (Show, Functor, Foldable)
+
+hoistRow :: (f a -> g a) -> Row f a -> Row g a
+hoistRow f (Row x y zs) = Row x y (map f zs)
+
+instance Applicative f => Applicative (Row f) where
+    pure x = Row x x (repeat (pure x))
+
+    Row f1 f2 fs <*> Row x1 x2 xs =
+        Row (f1 x1) (f2 x2) (zipWith (<*>) fs xs)
+
+newtype V1 a = V1 a
+  deriving (Show, Functor, Foldable)
+
+instance Applicative V1 where
+    pure x = V1 x
+    V1 f1 <*> V1 x1 = V1 (f1 x1)
+
+data V2 a = V2 a a
+  deriving (Show, Functor, Foldable)
+
+instance Applicative V2 where
+    pure x = V2 x x
+    V2 f1 f2 <*> V2 x1 x2 = V2 (f1 x1) (f2 x2)
+
+makeHeader
+    :: RunName    -- ^ first run
+    -> [RunName]  -- ^ other runs
+    -> Row V1 B.Box
+makeHeader fname names =
+    fmap B.text $ Row "Benchmark"  (getRunName fname) (map (V1 . getRunName) names)
 
 makeTable
     :: RunName    -- ^ first run
     -> [RunName]  -- ^ other runs
     -> Map RowName (Map RunName Stats)
-    -> [[String]]
-makeTable fname names results = buildList $ do
-    -- header
-    item $ buildList $ do
-        item "Benchmark"
-        item (getRunName fname)
-        for_ names $ \name -> do
-            item (getRunName name)
-            item ""
-
+    -> [Row V2 B.Box]
+makeTable fname names results = map (fmap B.text) $ buildList $ do
     -- rows
     for_ (Map.toList results) $ \(rn, mp) ->
-        for_ (Map.lookup fname mp) $ \fstats -> item $ buildList $ do
-            -- benchmark and first value
-            item (getRowName rn)
-            let fmean = statsMean fstats
-            let precision :: Int
+        for_ (Map.lookup fname mp) $ \fstats ->  do
+            let fmean :: Double
+                fmean = statsMean fstats
+
+                precision :: Int
                 precision = round $ logBase 10 fmean
 
-            item $ showD precision fmean
+                -- rest benchmarks
+                rest :: [V2 String]
+                rest = buildList $ do
+                    for_ names $ \name -> case Map.lookup name mp of
+                        Nothing    -> do
+                            item (V2 "" "")
+                        Just stats -> do
+                            let mean = statsMean stats
+                            item $ V2 (showD precision mean) (showP fmean mean)
 
-            -- rest benchmarks
-            for_ names $ \name -> case Map.lookup name mp of
-                Nothing    -> do
-                    item ""
-                    item ""
-                Just stats -> do
-                    let mean = statsMean stats
-                    item $ showD precision mean
-                    item $ showP fmean mean
+            -- name, first, rest
+            item $ Row (getRowName rn) (showD precision fmean) rest
   where
     showD :: Int -> Double -> String
     showD p d = showFFloat (Just 3) (mul * d) . showChar 'e' . shows p $ ""
@@ -54,28 +85,6 @@ makeTable fname names results = buildList $ do
     showP orig curr
         | curr > orig  = '+' : showFFloat (Just 2) (100 * (curr - orig) / orig) "%"
         | otherwise    = '-' : showFFloat (Just 2) (100 * (orig - curr) / orig) "%"
-
--- https://oleg.fi/gists/posts/2019-04-28-tabular.html
---
--- unfortunately this doesn't allow colspans
-tabular :: [[String]] -> String
-tabular zs = unlines rs where
-    (cs, ws, rs) = foldr go (0, repeat 0, []) zs
-
-    go :: [String] -> (Int, [Int], [String]) -> (Int, [Int], [String])
-    go x (c, w, ys) =
-        (max c (length x), zipWith max w (map length x ++ repeat 0),
-         unwords' (take cs (zipWith' x ws)) : ys)
-
-    fr s n = replicate (n - length s) ' ' ++ s
-    fl s n = s ++ replicate (n - length s) ' '
-
-    zipWith' :: [String] -> [Int] -> [String]
-    zipWith' (s:ss) (n:ns) = fl s n : zipWith fr ss ns
-    zipWith' _      _      = []
-
-    -- two spaces instead one
-    unwords' = intercalate "  "
 
 -------------------------------------------------------------------------------
 -- List Builder
