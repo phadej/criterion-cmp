@@ -1,10 +1,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE RecordWildCards   #-}
-
-import Prelude.Compat
 
 import Control.Applicative (many)
 import Data.Bifunctor      (first)

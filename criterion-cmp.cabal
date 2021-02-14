@@ -15,7 +15,7 @@ maintainer:    Oleg Grenrus <oleg.grenrus@iki.fi>
 copyright:     (c) 2020-2021 Oleg Grenrus, 2016-2020 Ben Gamari
 category:      Development
 build-type:    Simple
-tested-with:   GHC == 7.10.3, GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1
+tested-with:   GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1
 
 source-repository head
   type:     git
@@ -32,15 +32,13 @@ executable criterion-cmp
     Table
 
   other-extensions:
-    NoImplicitPrelude
     FlexibleContexts
     GeneralizedNewtypeDeriving
     OverloadedStrings
     RecordWildCards
 
   build-depends:
-      base                  >=4.8      && <4.15
-    , base-compat-batteries >=0.11.1   && <0.12
+      base                  >=4.9      && <4.15
     , bytestring            >=0.10.4.0 && <0.11
     , cassava               >=0.5      && <0.6
     , containers            >=0.5.5.1  && <0.7

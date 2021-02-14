@@ -1,10 +1,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module CsvParse (readResults) where
-
-import Prelude.Compat
 
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Csv             as Csv
