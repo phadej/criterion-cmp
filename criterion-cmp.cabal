@@ -16,7 +16,7 @@ copyright:     (c) 2020-2021 Oleg Grenrus, 2016-2020 Ben Gamari
 category:      Development
 build-type:    Simple
 tested-with:
-  GHC ==8.0.2 || ==8.2.2 || ==8.4.4 || ==8.6.5 || ==8.8.3 || ==8.10.1
+  GHC ==8.4.4 || ==8.6.5 || ==8.8.3 || ==8.10.1
 
 source-repository head
   type:     git
@@ -42,7 +42,7 @@ executable criterion-cmp
 
   -- ghc boot libs
   build-depends:
-    , base        >=4.9      && <4.15
+    , base        >=4.11      && <4.15
     , bytestring  ^>=0.10.4.0
     , containers  ^>=0.5.5.1 || ^>=0.6.0.1
     , filepath    ^>=1.4
