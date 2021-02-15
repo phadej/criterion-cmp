@@ -8,10 +8,13 @@ import Data.Foldable (for_)
 import Data.Map      (Map)
 import Numeric       (showFFloat)
 
-import qualified Text.PrettyPrint.Boxes as B
+import qualified System.Console.ANSI as ANSI
+import qualified Text.PrettyPrint.Boxes.Annotated as B
 import qualified Data.Map.Strict as Map
 
 import Types
+
+type Box = B.Box [ANSI.SGR]
 
 -- | Row of things.
 --
@@ -45,7 +48,7 @@ instance Applicative V2 where
 makeHeader
     :: RunName    -- ^ first run
     -> [RunName]  -- ^ other runs
-    -> Row V1 B.Box
+    -> Row V1 Box
 makeHeader fname names =
     fmap B.text $ Row "Benchmark"  (getRunName fname) (map (V1 . getRunName) names)
 
@@ -53,8 +56,8 @@ makeTable
     :: RunName    -- ^ first run
     -> [RunName]  -- ^ other runs
     -> Map RowName (Map RunName Stats)
-    -> [Row V2 B.Box]
-makeTable fname names results = map (fmap B.text) $ buildList $ do
+    -> [Row V2 Box]
+makeTable fname names results = buildList $ do
     -- rows
     for_ (Map.toList results) $ \(rn, mp) ->
         for_ (Map.lookup fname mp) $ \fstats ->  do
@@ -65,26 +68,33 @@ makeTable fname names results = map (fmap B.text) $ buildList $ do
                 precision = round $ logBase 10 fmean
 
                 -- rest benchmarks
-                rest :: [V2 String]
+                rest :: [V2 Box]
                 rest = buildList $ do
                     for_ names $ \name -> case Map.lookup name mp of
                         Nothing    -> do
-                            item (V2 "" "")
+                            item (V2 (B.text "") (B.text ""))
                         Just stats -> do
                             let mean = statsMean stats
                             item $ V2 (showD precision mean) (showP fmean mean)
 
             -- name, first, rest
-            item $ Row (getRowName rn) (showD precision fmean) rest
+            item $ Row (B.text (getRowName rn)) (showD precision fmean) rest
   where
-    showD :: Int -> Double -> String
-    showD p d = showFFloat (Just 3) (mul * d) . showChar 'e' . shows p $ ""
+    showD :: Int -> Double -> Box
+    showD p d = B.text $ showFFloat (Just 3) (mul * d) . showChar 'e' . shows p $ ""
       where mul = 10 ^ negate p
 
-    showP :: Double -> Double -> String
+    showP :: Double -> Double -> Box
     showP orig curr
-        | curr > orig  = '+' : showFFloat (Just 2) (100 * (curr - orig) / orig) "%"
-        | otherwise    = '-' : showFFloat (Just 2) (100 * (orig - curr) / orig) "%"
+        | diff > 0   = mkBox $ '+' : showFFloat (Just 2) (100 *        diff) "%"
+        | otherwise  = mkBox $ '-' : showFFloat (Just 2) (100 * negate diff) "%"
+      where
+        diff = (curr - orig) / orig
+        mkBox | abs diff >= 0.1 = B.ann hl . B.text
+              | otherwise       = B.text
+        hl = [ ANSI.SetConsoleIntensity ANSI.BoldIntensity
+             , ANSI.SetColor ANSI.Foreground ANSI.Vivid $ if diff > 0 then ANSI.Red else ANSI.Green
+             ]
 
 -------------------------------------------------------------------------------
 -- List Builder

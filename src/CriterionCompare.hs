@@ -9,10 +9,12 @@ import Data.Foldable       (foldl')
 import Data.Map            (Map)
 import Data.Traversable    (for)
 import System.FilePath     (dropExtension, takeFileName)
+import System.IO           (stdout)
 
-import qualified Data.Map.Strict        as Map
-import qualified Options.Applicative    as O
-import qualified Text.PrettyPrint.Boxes as B
+import qualified Data.Map.Strict                  as Map
+import qualified Options.Applicative              as O
+import qualified System.Console.ANSI              as ANSI
+import qualified Text.PrettyPrint.Boxes.Annotated as B
 
 import CsvParse
 import Table
@@ -71,6 +73,14 @@ data A = A !Double !Int !Int
 main :: IO ()
 main = do
     Options{..} <- O.execParser $ O.info (O.helper <*> options) mempty
+    supportsAnsi <- ANSI.hSupportsANSI stdout
+
+    let annotated' :: [ANSI.SGR] -> String -> String
+        annotated' [] str = str
+        annotated' xs str = ANSI.setSGRCode xs ++ str ++ ANSI.setSGRCode []
+
+    let annotated | supportsAnsi = annotated'
+                  | otherwise    = const id
 
     let runs :: [(RunName, FilePath)]
         runs = zipWith f (map Just optRunNames ++ repeat Nothing) optRunPaths
@@ -95,25 +105,25 @@ main = do
             let results :: Map RowName (Map RunName Stats)
                 results = flipFiniteMap results1
 
-            let header :: Row V1 B.Box
+            let header :: Row V1 Box
                 header = makeHeader fname names
 
-            let table :: [Row V2 B.Box]
+            let table :: [Row V2 Box]
                 table = makeTable fname names results
 
-            let table1 :: Row V2 [B.Box]
+            let table1 :: Row V2 [Box]
                 table1 = sequenceA table
 
-            let table2 :: Row V2 B.Box
+            let table2 :: Row V2 Box
                 table2 = case table1 of
                     Row f n xs -> Row
                         (B.vcat B.left f)
                         (B.vcat B.right n)
                         (fmap (fmap (B.vcat B.right)) xs)
 
-            let table3 :: Row V1 B.Box
+            let table3 :: Row V1 Box
                 table3 = hoistRow (\(V2 x y) -> V1 (x B.<+> y)) table2
 
             let table4 = pure (B.//) <*> header <*> table3
 
-            B.printBox $ B.hsep 2 B.left table4
+            putStr $ B.renderAnn annotated $ B.hsep 2 B.left table4

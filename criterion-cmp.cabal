@@ -31,6 +31,7 @@ executable criterion-cmp
     CsvParse
     Table
     Types
+    Text.PrettyPrint.Boxes.Annotated
 
   other-extensions:
     DeriveFunctor
@@ -50,7 +51,7 @@ executable criterion-cmp
   -- other-deps
   build-depends:
     , ansi-terminal         ^>=0.11
-    , boxes                 ^>=0.1.5
+    , split
     , cassava               ^>=0.5
     , optparse-applicative  ^>=0.16.1.0
     , vector                ^>=0.12.2.0
