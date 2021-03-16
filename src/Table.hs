@@ -64,8 +64,9 @@ makeTable fname names results = buildList $ do
             let fmean :: Double
                 fmean = statsMean fstats
 
+                -- precision is now negative
                 precision :: Int
-                precision = round $ logBase 10 fmean
+                precision = min 0 $ round $ logBase 10 fmean
 
                 -- rest benchmarks
                 rest :: [V2 Box]
