@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name:          criterion-cmp
-version:       0.1.0.0
+version:       0.1.0.1
 synopsis:      A simple tool for comparing in Criterion benchmark results
 description:
   Output a table containing a comparison of results for the input files
@@ -15,6 +15,7 @@ maintainer:    Oleg Grenrus <oleg.grenrus@iki.fi>
 copyright:     (c) 2020-2021 Oleg Grenrus, 2016-2020 Ben Gamari
 category:      Development
 build-type:    Simple
+extra-source-files: changelog.md
 tested-with:
   GHC ==8.4.4 || ==8.6.5 || ==8.8.3 || ==8.10.1
 
