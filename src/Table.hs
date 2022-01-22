@@ -1,6 +1,6 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DeriveFunctor  #-}
+{-# LANGUAGE RankNTypes     #-}
 module Table where
 
 import Control.Monad (ap)
@@ -8,9 +8,10 @@ import Data.Foldable (for_)
 import Data.Map      (Map)
 import Numeric       (showFFloat)
 
-import qualified System.Console.ANSI as ANSI
+import qualified Data.Map.Strict                  as Map
+import qualified Statistics.Distribution          as S
+import qualified System.Console.ANSI              as ANSI
 import qualified Text.PrettyPrint.Boxes.Annotated as B
-import qualified Data.Map.Strict as Map
 
 import Types
 
@@ -45,6 +46,13 @@ instance Applicative V2 where
     pure x = V2 x x
     V2 f1 f2 <*> V2 x1 x2 = V2 (f1 x1) (f2 x2)
 
+data V3 a = V3 a a a
+  deriving (Show, Functor, Foldable)
+
+instance Applicative V3 where
+    pure x = V3 x x x
+    V3 f1 f2 f3 <*> V3 x1 x2 x3 = V3 (f1 x1) (f2 x2) (f3 x3)
+
 makeHeader
     :: RunName    -- ^ first run
     -> [RunName]  -- ^ other runs
@@ -64,6 +72,9 @@ makeTable fname names results = buildList $ do
             let fmean :: Double
                 fmean = statsMean fstats
 
+                f :: ND
+                f = statsND fstats
+
                 -- precision is now negative
                 precision :: Int
                 precision = min 0 $ round $ logBase 10 fmean
@@ -75,27 +86,41 @@ makeTable fname names results = buildList $ do
                         Nothing    -> do
                             item (V2 (B.text "") (B.text ""))
                         Just stats -> do
-                            let mean = statsMean stats
-                            item $ V2 (showD precision mean) (showP fmean mean)
+                            let x = statsND stats
+                            item $ V2 (showND precision x) (showP f x)
 
             -- name, first, rest
-            item $ Row (B.text (getRowName rn)) (showD precision fmean) rest
+            item $ Row (B.text (getRowName rn)) (showND precision f) rest
   where
-    showD :: Int -> Double -> Box
-    showD p d = B.text $ showFFloat (Just 3) (mul * d) . showChar 'e' . shows p $ ""
+    showND :: Int -> ND -> Box
+    showND p nd = B.text
+        $ showFFloat (Just 3) (mul * (S.mean nd)) . showChar 'e' . shows p
+        . showString " ±"
+        . showFFloat (Just 2) (100 * S.stdDev nd / S.mean nd) . showChar '%'
+        $ ""
       where mul = 10 ^ negate p
 
-    showP :: Double -> Double -> Box
+    showP :: ND -> ND -> Box
     showP orig curr
         | diff > 0   = mkBox $ '+' : showFFloat (Just 2) (100 *        diff) "%"
         | otherwise  = mkBox $ '-' : showFFloat (Just 2) (100 * negate diff) "%"
       where
-        diff = (curr - orig) / orig
-        mkBox | abs diff >= 0.1 = B.ann hl . B.text
+        diff = (S.mean curr - S.mean orig) / S.mean orig
+        mkBox | less            = B.ann (hl ANSI.Green) . B.text
+              | more            = B.ann (hl ANSI.Red)   . B.text
               | otherwise       = B.text
-        hl = [ ANSI.SetConsoleIntensity ANSI.BoldIntensity
-             , ANSI.SetColor ANSI.Foreground ANSI.Vivid $ if diff > 0 then ANSI.Red else ANSI.Green
-             ]
+
+        hl c = [ ANSI.SetConsoleIntensity ANSI.BoldIntensity
+               , ANSI.SetColor ANSI.Foreground ANSI.Vivid c
+               ]
+
+        -- Pr(curr < 0.97 * orig) = Pr (curr - 0.97 * orig < 0)
+        -- i.e. 3% change with 99% confidence
+        less :: Bool
+        less = S.cumulative (subND curr (scaleND 0.97 orig)) 0 > 0.99
+
+        more :: Bool
+        more = S.cumulative (subND orig (scaleND 0.97 curr)) 0 > 0.99
 
 -------------------------------------------------------------------------------
 -- List Builder

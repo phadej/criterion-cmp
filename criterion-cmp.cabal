@@ -1,23 +1,23 @@
-cabal-version: 2.2
-name:          criterion-cmp
-version:       0.1.0.1
-synopsis:      A simple tool for comparing in Criterion benchmark results
+cabal-version:      2.2
+name:               criterion-cmp
+version:            0.1.0.1
+synopsis:           A simple tool for comparing in Criterion benchmark results
 description:
   Output a table containing a comparison of results for the input files
   Based on https://github.com/bgamari/criterion-compare
 
-license:       BSD-3-Clause
-license-file:  LICENSE
+license:            BSD-3-Clause
+license-file:       LICENSE
 author:
   Oleg Grenrus <oleg.grenrus@iki.fi>, Ben Gamari <ben@well-typed.com>
 
-maintainer:    Oleg Grenrus <oleg.grenrus@iki.fi>
-copyright:     (c) 2020-2021 Oleg Grenrus, 2016-2020 Ben Gamari
-category:      Development
-build-type:    Simple
+maintainer:         Oleg Grenrus <oleg.grenrus@iki.fi>
+copyright:          (c) 2020-2021 Oleg Grenrus, 2016-2020 Ben Gamari
+category:           Development
+build-type:         Simple
 extra-source-files: changelog.md
 tested-with:
-  GHC ==8.4.4 || ==8.6.5 || ==8.8.3 || ==8.10.1
+  GHC ==8.4.4 || ==8.6.5 || ==8.8.4 || ==8.10.7 || ==9.0.2 || ==9.2.1
 
 source-repository head
   type:     git
@@ -31,12 +31,12 @@ executable criterion-cmp
   other-modules:
     CsvParse
     Table
-    Types
     Text.PrettyPrint.Boxes.Annotated
+    Types
 
   other-extensions:
-    DeriveFunctor
     DeriveFoldable
+    DeriveFunctor
     FlexibleContexts
     GeneralizedNewtypeDeriving
     OverloadedStrings
@@ -44,7 +44,7 @@ executable criterion-cmp
 
   -- ghc boot libs
   build-depends:
-    , base        >=4.11      && <4.15
+    , base        >=4.11     && <4.15
     , bytestring  ^>=0.10.4.0
     , containers  ^>=0.5.5.1 || ^>=0.6.0.1
     , filepath    ^>=1.4
@@ -52,7 +52,8 @@ executable criterion-cmp
   -- other-deps
   build-depends:
     , ansi-terminal         ^>=0.11
-    , split
     , cassava               ^>=0.5
     , optparse-applicative  ^>=0.16.1.0
+    , split
+    , statistics            ^>=0.16.0.1
     , vector                ^>=0.12.2.0

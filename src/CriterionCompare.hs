@@ -99,8 +99,7 @@ main = do
 
             let results1 :: Map RunName (Map RowName Stats)
                 results1 = fmap addGMean results0 where
-                    -- zzz will make the line appear last.
-                    addGMean m = Map.insert RowMean (Stats (gmean m) 0 0 0 0 0) m
+                    addGMean m = Map.insert RowMean (Stats (gmean m) 0 0 1e-7 0 0) m
 
             let results :: Map RowName (Map RunName Stats)
                 results = flipFiniteMap results1
